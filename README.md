@@ -10,6 +10,8 @@ This script will successfully export your Drupal 7 post and page bodies
 along with their titles and URL aliases to an HTML table, which you can
 then use to import to your SQL by means of phpmyadmin and CSV.
 
+It will also strip garbage tags and classes which Drupal put in post body content.
+
 What I'm working on now
 =======
 I'm working on building an SQL statement builder which will essentially build
