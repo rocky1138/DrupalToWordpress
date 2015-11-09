@@ -25,32 +25,29 @@
  */
  
 // Configuration options.
+$drupalDbHost = 'localhost';
+$drupalDbPort = '3306';
+$drupalDb = 'gameblaster64-old';
+$drupalDbUser = 'root';
+$drupalDbPass = '';
+$drupalDbTblPrefix = 'gameblaster64_';
+
+$wordpressDbHost = 'localhost';
+$wordpressDbPort = '3306';
+$wordpressDb = 'gameblaster64';
+$wordpressDbUser = 'root';
+$wordpressDbPass = '';
+
 $uriBase = 'http://gameblaster64.xandorus.com';
 $uriMakeAbsolute = true;
 $htmlAllowed = 'p,b,a[href|title|rel],i,ul,ol,li,img[src|alt|width|height],br,iframe[src|width|height|frameborder],h1,h2,h3,h4,h5,table,thead,tbody,th,tr,td,span';
+// End of configuration options.
 
-?>
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-	<link href="https://cdn.jsdelivr.net/pure/0.6.0/pure-min.css" rel="stylesheet">
-</head>
-<body>
-
-<table class="pure-table pure-table-horizontal pure-table-striped">
-	<thead>
-		<tr>
-			<th>Title</th>
-			<th>Created</th>
-			<th>URL alias</th>
-			<th>Body</th>
-		</tr>
-	</thead>
-	
-	<tbody>
-
-<?php
+$drupalDbTblBody = $drupalDbTblPrefix . 'field_data_body';
+$drupalDbTblTags = $drupalDbTblPrefix . 'field_data_field_tags';
+$drupalDbTblNode = $drupalDbTblPrefix . 'node';
+$drupalDbTblAlias = $drupalDbTblPrefix . 'url_alias';
+$drupalDbTblTaxonomy = $drupalDbTblPrefix . 'taxonomy_term_data';
 
 require_once('vendor/ezyang/htmlpurifier/library/HTMLPurifier.auto.php');
 
@@ -63,80 +60,62 @@ $config->set('URI.MakeAbsolute', $uriMakeAbsolute);
 
 $purifier = new HTMLPurifier($config);
 
-$db = new PDO('mysql:host=localhost;dbname=gameblaster64-old', 'root', '', array(PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES "utf8"'));
-
-$tblBody = 'gameblaster64_field_data_body';
-$tblNode = 'gameblaster64_node';
-$tblUrlAlias = 'gameblaster64_url_alias';
-
-$articles = getArticles();
-
-for ($i = 0; $i < count($articles); $i++) {
-    
-    echo '<tr>';
-    echo '<td>';
-    
-    echo $articles[$i]['title'];
-    
-    echo '</td>';
-    echo '<td>';
-    
-    echo $articles[$i]['created'];
-    
-    echo '</td>';
-    echo '<td>';
-    
-    echo $articles[$i]['alias'];
-    
-    echo '</td>';
-    echo '<td>';
-    
-    echo htmlentities($purifier->purify($articles[$i]['body']));
-    //echo htmlentities($articles[$i]['body']);
-    
-    echo '</td>';
-    echo '</tr>';   
-}
+$db = new PDO('mysql:host=' . $drupalDbHost . ':' . $drupalDbPort . ';dbname=' . $drupalDb, $drupalDbUser, $drupalDbPass, array(PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES "utf8"'));
 
 ?>
-	</tbody>
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<link href="https://cdn.jsdelivr.net/pure/0.6.0/pure-min.css" rel="stylesheet">
+	</head>
+	<body>
+	<div class="content-wrapper">
+		<div class="content">
+			<h1>Drupal To Wordpress</h1>
 
-</table>
-
+			<div class="pure-g">
+				<div class="pure-u-1-2">
+					<h2>From Drupal</h2>
+					<h3><?php echo $drupalDbHost; ?>:<?php echo $drupalDbPort; ?>, <?php echo $drupalDb; ?></h3>
+					<p>Exporting articles (posts) from Drupal: <?php $drupalArticles = getArticles(); ?>Done!</p>
+					<p>Exporting taxonomies (tags) from Drupal: <?php $drupalTaxonomies = getTaxonomiesUrls(); ?>Done!</p>
+					<p>Mapping taxonomies to articles: <?php //$drupalArticles = mapTaxonomiesToArticles($drupalArticles, $drupalTaxonomies); ?>Done!</p>
+				</div>
+				<div class="pure-u-1-2">
+					<h2>To Wordpress</h2>
+					<h3><?php echo $wordpressDbHost; ?>:<?php echo $wordpressDbPort; ?>, <?php echo $wordpressDb; ?></h3>
+					<p>Importing completed posts to Wordpress: <?php // putPosts(); ?>Done!</p>
+					<p>Generating HTTP 301 redirects for posts: <?php // create301Articles(); ?>Done!</p>
+					<p>Generating HTTP 301 redirects for tags: <?php // create301Taxonomies(); ?>Done!</p>
+				</div>
+			</div>
+		</div>
+	</div>
+    </body>
+</html>
 <?php
-
-// Taxonomies URLs.
-echo '<h2>Taxonomies URLs</h2>';
-
-$taxonomiesUrls = getTaxonomiesUrls();
-
-sort($taxonomiesUrls);
-
-for ($i = 0; $i < count($taxonomiesUrls); $i++) {
-    echo $taxonomiesUrls[$i] . '<br>';
-}
 
 /**
  * Extract articles from a Drupal 7 database.
  */
 function getArticles() {
 
-    global $db, $tblBody, $tblNode, $tblUrlAlias;
+    global $db, $drupalDbTblBody, $drupalDbTblNode, $drupalDbTblAlias;
 
     $results = [];
 
     $sql  = 'SELECT ';
-    $sql .= $tblNode . '.title, ';
-	$sql .= $tblNode . '.created, ';
-    $sql .= $tblUrlAlias . '.alias, ';
-    $sql .= $tblBody . '.body_value as body ';
+    $sql .= $drupalDbTblNode . '.title, ';
+	$sql .= $drupalDbTblNode . '.created, ';
+    $sql .= $drupalDbTblAlias . '.alias, ';
+    $sql .= $drupalDbTblBody . '.body_value as body ';
     
-    $sql .= 'FROM ';
-    $sql .= $tblBody . ' ';
-    $sql .= 'INNER JOIN ' . $tblNode . ' ON ' . $tblBody . '.entity_id = ' . $tblNode . '.nid ';
-    $sql .= 'INNER JOIN ' . $tblUrlAlias . ' ON ' . $tblUrlAlias . '.source = CONCAT("node/", ' . $tblNode . '.nid)';
+    $sql .= 'FROM ' . $drupalDbTblBody . ' ';
+    $sql .= 'INNER JOIN ' . $drupalDbTblNode . ' ON ' . $drupalDbTblBody . '.entity_id = ' . $drupalDbTblNode . '.nid ';
+    $sql .= 'INNER JOIN ' . $drupalDbTblAlias . ' ON ' . $drupalDbTblAlias . '.source = CONCAT("node/", ' . $drupalDbTblNode . '.nid)';
 
-	$sql .= 'ORDER BY ' . $tblNode . '.created';
+	$sql .= 'ORDER BY ' . $drupalDbTblNode . '.created';
 	
     $stmt = $db->prepare($sql);
 
@@ -154,13 +133,47 @@ function getArticles() {
  */
 function getTaxonomiesUrls() {
 
-    global $db, $tblNode, $tblUrlAlias;
+    global $db, $drupalDbTblNode, $drupalDbTblAlias, $drupalDbTblTaxonomy;
 
     $results = [];
 
-    $sql  = 'SELECT alias FROM ' . $tblUrlAlias . ' ';
-    $sql .= 'LEFT JOIN ' . $tblNode . ' ON ' . $tblUrlAlias . '.source = CONCAT("node/", ' . $tblNode . '.nid)';
-    $sql .= 'WHERE (' . $tblNode . '.nid is NULL)';
+    $sql  = 'SELECT ';
+    $sql .= $drupalDbTblAlias . '.alias, ';
+	$sql .= $drupalDbTblTaxonomy . '.tid, ';
+	$sql .= $drupalDbTblTaxonomy . '.name ';
+	$sql .= 'FROM ' . $drupalDbTblAlias . ' ';
+	$sql .= 'INNER JOIN ' . $drupalDbTblTaxonomy . ' ON ' . $drupalDbTblAlias . '.source = CONCAT("taxonomy/term/", ' . $drupalDbTblTaxonomy . '.tid) ';
+	$sql .= 'ORDER BY ' . $drupalDbTblTaxonomy . '.name';
+
+    $stmt = $db->prepare($sql);
+
+    $stmt->execute();
+
+    while ($result = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $results[$result['tid']] = $result;
+    }
+
+    return $results;
+}
+
+function mapTaxonomiesToArticles($drupalArticles, $drupalTaxonomies) {
+
+	//$map = getTaxonomyArticleRelation();
+	
+}
+
+/**
+ * Match the taxonomies to each article they're a part of.
+ */
+function getTaxonomyArticleRelation() {
+
+    global $db, $articles, $drupalDbTblTags, $drupalDbTblAlias;
+
+    $results = [];
+
+    $sql  = 'SELECT alias FROM ' . $drupalDbTblAlias . ' ';
+    $sql .= 'LEFT JOIN ' . $drupalDbTblNode . ' ON ' . $drupalDbTblAlias . '.source = CONCAT("node/", ' . $drupalDbTblNode . '.nid)';
+    $sql .= 'WHERE (' . $drupalDbTblNode . '.nid is NULL)';
 
     $stmt = $db->prepare($sql);
 
@@ -173,5 +186,3 @@ function getTaxonomiesUrls() {
     return $results;
 }
 ?>
-    </body>
-</html>
