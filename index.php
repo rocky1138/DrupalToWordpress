@@ -38,10 +38,11 @@ $htmlAllowed = 'p,b,a[href|title|rel],i,ul,ol,li,img[src|alt|width|height],br,if
 </head>
 <body>
 
-<table class="pure-table">
+<table class="pure-table pure-table-horizontal pure-table-striped">
 	<thead>
 		<tr>
 			<th>Title</th>
+			<th>Created</th>
 			<th>URL alias</th>
 			<th>Body</th>
 		</tr>
@@ -76,6 +77,11 @@ for ($i = 0; $i < count($articles); $i++) {
     echo '<td>';
     
     echo $articles[$i]['title'];
+    
+    echo '</td>';
+    echo '<td>';
+    
+    echo $articles[$i]['created'];
     
     echo '</td>';
     echo '<td>';
@@ -121,6 +127,7 @@ function getArticles() {
 
     $sql  = 'SELECT ';
     $sql .= $tblNode . '.title, ';
+	$sql .= $tblNode . '.created, ';
     $sql .= $tblUrlAlias . '.alias, ';
     $sql .= $tblBody . '.body_value as body ';
     
@@ -129,6 +136,8 @@ function getArticles() {
     $sql .= 'INNER JOIN ' . $tblNode . ' ON ' . $tblBody . '.entity_id = ' . $tblNode . '.nid ';
     $sql .= 'INNER JOIN ' . $tblUrlAlias . ' ON ' . $tblUrlAlias . '.source = CONCAT("node/", ' . $tblNode . '.nid)';
 
+	$sql .= 'ORDER BY ' . $tblNode . '.created';
+	
     $stmt = $db->prepare($sql);
 
     $stmt->execute();
