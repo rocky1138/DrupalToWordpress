@@ -1,0 +1,14 @@
+{
+    "name": "rocky1138/drupal-to-wordpress",
+    "description": "Drupal To Wordpress",
+    "require": {
+        "ezyang/htmlpurifier": "^4.7"
+    },
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "John Rockefeller",
+            "email": "jrockefeller1@gmail.com"
+        }
+    ]
+}

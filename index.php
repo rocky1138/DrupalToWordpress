@@ -23,28 +23,44 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+ 
+// Configuration options.
+$uriBase = 'http://gameblaster64.xandorus.com';
+$uriMakeAbsolute = true;
+$htmlAllowed = 'p,b,a[href|title|rel],i,ul,ol,li,img[src|alt|width|height],br,iframe[src|width|height|frameborder],h1,h2,h3,h4,h5,table,thead,tbody,th,tr,td,span';
 
 ?>
 <!doctype html>
-<html>
+<html lang="en">
 <head>
     <meta charset="utf-8">
-    <style>
-    table { border:1px solid #333; }
-    th { text-align:left; background: #333; color: #fff; }
-    td { border:1px solid #333; }
-    </style>
+	<link href="https://cdn.jsdelivr.net/pure/0.6.0/pure-min.css" rel="stylesheet">
 </head>
 <body>
 
-<table>
-    <tr>
-        <th>Title</th>
-        <th>URL alias</th>
-        <th>Body</th>
-    </tr>
+<table class="pure-table">
+	<thead>
+		<tr>
+			<th>Title</th>
+			<th>URL alias</th>
+			<th>Body</th>
+		</tr>
+	</thead>
+	
+	<tbody>
 
 <?php
+
+require_once('vendor/ezyang/htmlpurifier/library/HTMLPurifier.auto.php');
+
+$config = HTMLPurifier_Config::createDefault();
+$config->set('HTML.Trusted', true);
+$config->set('Filter.YouTube', true);
+$config->set('HTML.Allowed', $htmlAllowed);
+$config->set('URI.Base', $uriBase);
+$config->set('URI.MakeAbsolute', $uriMakeAbsolute);
+
+$purifier = new HTMLPurifier($config);
 
 $db = new PDO('mysql:host=localhost;dbname=gameblaster64-old', 'root', '', array(PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES "utf8"'));
 
@@ -69,13 +85,15 @@ for ($i = 0; $i < count($articles); $i++) {
     echo '</td>';
     echo '<td>';
     
-    echo htmlentities($articles[$i]['body']);
+    echo htmlentities($purifier->purify($articles[$i]['body']));
+    //echo htmlentities($articles[$i]['body']);
     
     echo '</td>';
     echo '</tr>';   
 }
 
 ?>
+	</tbody>
 
 </table>
 
