@@ -80,7 +80,7 @@ $db = new PDO('mysql:host=' . $drupalDbHost . ':' . $drupalDbPort . ';dbname=' .
 					<h3><?php echo $drupalDbHost; ?>:<?php echo $drupalDbPort; ?>, <?php echo $drupalDb; ?></h3>
 					<p>Exporting articles (posts) from Drupal: <?php $drupalArticles = getArticles(); ?>Done!</p>
 					<p>Exporting taxonomies (tags) from Drupal: <?php $drupalTaxonomies = getTaxonomiesUrls(); ?>Done!</p>
-					<p>Mapping taxonomies to articles: <?php //$drupalArticles = mapTaxonomiesToArticles($drupalArticles, $drupalTaxonomies); ?>Done!</p>
+					<p>Mapping taxonomies to articles: <?php $drupalArticles = mapTaxonomiesToArticles($drupalArticles, $drupalTaxonomies); ?>Done!</p>
 				</div>
 				<div class="pure-u-1-2">
 					<h2>To Wordpress</h2>
@@ -106,6 +106,7 @@ function getArticles() {
     $results = [];
 
     $sql  = 'SELECT ';
+    $sql .= $drupalDbTblNode . '.nid, ';
     $sql .= $drupalDbTblNode . '.title, ';
 	$sql .= $drupalDbTblNode . '.created, ';
     $sql .= $drupalDbTblAlias . '.alias, ';
@@ -122,7 +123,7 @@ function getArticles() {
     $stmt->execute();
 
     while ($result = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        $results[] = $result;
+        $results[$result['nid']] = $result;
     }
 
     return $results;
@@ -158,8 +159,13 @@ function getTaxonomiesUrls() {
 
 function mapTaxonomiesToArticles($drupalArticles, $drupalTaxonomies) {
 
-	//$map = getTaxonomyArticleRelation();
-	
+	$map = getTaxonomyArticleRelation();
+    
+    foreach ($map as $articleId => $tags) {
+        $drupalArticles[$articleId]['tags'] = $tags;
+    }
+    
+    return $drupalArticles;	
 }
 
 /**
@@ -167,22 +173,24 @@ function mapTaxonomiesToArticles($drupalArticles, $drupalTaxonomies) {
  */
 function getTaxonomyArticleRelation() {
 
-    global $db, $articles, $drupalDbTblTags, $drupalDbTblAlias;
+    global $db, $articles, $drupalDbTblTags, $drupalDbTblAlias, $drupalDbTblTaxonomy;
 
     $results = [];
 
-    $sql  = 'SELECT alias FROM ' . $drupalDbTblAlias . ' ';
-    $sql .= 'LEFT JOIN ' . $drupalDbTblNode . ' ON ' . $drupalDbTblAlias . '.source = CONCAT("node/", ' . $drupalDbTblNode . '.nid)';
-    $sql .= 'WHERE (' . $drupalDbTblNode . '.nid is NULL)';
-
+    $sql  = 'SELECT ';
+    $sql .= $drupalDbTblTags . '.entity_id AS articleId, ';
+    $sql .= $drupalDbTblTaxonomy . '.name ';
+    $sql .= 'FROM ' . $drupalDbTblTags . ' ';
+    $sql .= 'INNER JOIN ' . $drupalDbTblTaxonomy . ' ON ' . $drupalDbTblTags . '.field_tags_tid = ' . $drupalDbTblTaxonomy . '.tid';
+    
     $stmt = $db->prepare($sql);
 
     $stmt->execute();
 
     while ($result = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        $results[] = $result['alias'];
+        $results[$result['articleId']][] = $result['name'];
     }
-
+    
     return $results;
 }
 ?>
