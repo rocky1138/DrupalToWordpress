@@ -24,6 +24,10 @@
  * THE SOFTWARE.
  */
  
+/**
+ * Dependencies: Compose, WordPress, MySQL.
+ */
+ 
 // Configuration options.
 $drupalDbHost = 'localhost';
 $drupalDbPort = '3306';
@@ -32,11 +36,9 @@ $drupalDbUser = 'root';
 $drupalDbPass = '';
 $drupalDbTblPrefix = 'gameblaster64_';
 
-$wordpressDbHost = 'localhost';
-$wordpressDbPort = '3306';
-$wordpressDb = 'gameblaster64';
-$wordpressDbUser = 'root';
-$wordpressDbPass = '';
+// WordPress configuration is handled through wp-config.php.
+require_once('../wp-config.php');
+require_once('../wp-load.php');
 
 $uriBase = 'http://gameblaster64.xandorus.com';
 $uriMakeAbsolute = true;
@@ -80,12 +82,11 @@ $db = new PDO('mysql:host=' . $drupalDbHost . ':' . $drupalDbPort . ';dbname=' .
 					<h3><?php echo $drupalDbHost; ?>:<?php echo $drupalDbPort; ?>, <?php echo $drupalDb; ?></h3>
 					<p>Exporting articles (posts) from Drupal: <?php $drupalArticles = getArticles(); ?>Done!</p>
 					<p>Exporting taxonomies (tags) from Drupal: <?php $drupalTaxonomies = getTaxonomiesUrls(); ?>Done!</p>
-					<p>Mapping taxonomies to articles: <?php $drupalArticles = mapTaxonomiesToArticles($drupalArticles, $drupalTaxonomies); ?>Done!</p>
+					<p>Mapping taxonomies to articles: <?php $drupalArticles = mapTaxonomiesToArticles($drupalArticles); ?>Done!</p>
 				</div>
 				<div class="pure-u-1-2">
 					<h2>To Wordpress</h2>
-					<h3><?php echo $wordpressDbHost; ?>:<?php echo $wordpressDbPort; ?>, <?php echo $wordpressDb; ?></h3>
-					<p>Importing completed posts to Wordpress: <?php // putPosts(); ?>Done!</p>
+					<p>Importing completed posts to Wordpress: <?php putPosts($drupalArticles); ?>Done!</p>
 					<p>Generating HTTP 301 redirects for posts: <?php // create301Articles(); ?>Done!</p>
 					<p>Generating HTTP 301 redirects for tags: <?php // create301Taxonomies(); ?>Done!</p>
 				</div>
@@ -157,7 +158,7 @@ function getTaxonomiesUrls() {
     return $results;
 }
 
-function mapTaxonomiesToArticles($drupalArticles, $drupalTaxonomies) {
+function mapTaxonomiesToArticles($drupalArticles) {
 
 	$map = getTaxonomyArticleRelation();
     
@@ -192,5 +193,30 @@ function getTaxonomyArticleRelation() {
     }
     
     return $results;
+}
+
+/**
+ * Insert posts into Wordpress.
+ */
+function putPosts($drupalArticles) {
+    
+    /**
+     *    Use WordPress functions rather than inserting records directly
+     * through MySQL just in case functionality changes, etc. This
+     * relieves us of any changes in WordPress database structure
+     * across versions.
+     */
+    foreach ($drupalArticles as $key => $article) {
+        $post = array(
+                'post_author' => 1,
+                'post_content' => $article['body'],
+                'post_date' => date('Y-m-d H:i:s', $article['created']),
+                'post_name' => $article['alias'],
+                'post_status' => 'publish',
+                'post_title' => $article['title'],
+                'tags_input' =>$article['tags']
+            );
+        wp_insert_post($post);
+    }    
 }
 ?>
